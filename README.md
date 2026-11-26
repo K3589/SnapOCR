@@ -2,6 +2,9 @@
 
 **按下热键，框一下，文字已经在剪贴板里。**
 
+[![build](https://github.com/K3589/SnapOCR/actions/workflows/build.yml/badge.svg)](https://github.com/K3589/SnapOCR/actions/workflows/build.yml)
+[![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 一个常驻托盘的 Windows 11 瞬时 OCR 小工具。没有主窗口，不联网，不上传任何像素 —— 识别用的是系统自带的本地引擎。
 
 ![框选界面](docs/screenshots/overlay.png)
