@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.19041.0</TargetPlatformMinVersion>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <WindowsPackageType>None</WindowsPackageType>
+    <RootNamespace>SnapOCR.UiProbe</RootNamespace>
+    <!-- 为了用 Clipboard.SetImage 产生「真实截图工具那种 OLE 剪贴板图片」 -->
+    <UseWindowsForms>true</UseWindowsForms>
+  </PropertyGroup>
+
+  <!-- 端到端验收：模拟热键 → 模拟拖拽 → 读剪贴板，跑的是生产代码的抓屏与 OCR。 -->
+  <ItemGroup>
+    <Compile Include="..\..\src\SnapOCR\Interop\NativeMethods.cs" Link="Linked\NativeMethods.cs" />
+    <Compile Include="..\..\src\SnapOCR\Capture\DpiHelper.cs" Link="Linked\DpiHelper.cs" />
+    <Compile Include="..\..\src\SnapOCR\Capture\MonitorEnumerator.cs" Link="Linked\MonitorEnumerator.cs" />
+    <Compile Include="..\..\src\SnapOCR\Capture\ScreenCapture.cs" Link="Linked\ScreenCapture.cs" />
+    <Compile Include="..\..\src\SnapOCR\Ocr\IOcrService.cs" Link="Linked\IOcrService.cs" />
+    <Compile Include="..\..\src\SnapOCR\Ocr\TextComposer.cs" Link="Linked\TextComposer.cs" />
+    <Compile Include="..\..\src\SnapOCR\Ocr\SoftwareBitmapFactory.cs" Link="Linked\SoftwareBitmapFactory.cs" />
+    <Compile Include="..\..\src\SnapOCR\Ocr\WindowsOcrService.cs" Link="Linked\WindowsOcrService.cs" />
+    <Compile Include="..\Shared\PngWriter.cs" Link="Shared\PngWriter.cs" />
+  </ItemGroup>
+
+</Project>

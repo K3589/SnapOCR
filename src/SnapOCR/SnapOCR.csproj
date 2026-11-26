@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>$(SnapOcrTargetFramework)</TargetFramework>
+    <TargetPlatformMinVersion>$(SnapOcrMinPlatformVersion)</TargetPlatformMinVersion>
+
+    <RootNamespace>SnapOCR</RootNamespace>
+    <AssemblyName>SnapOCR</AssemblyName>
+    <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+
+    <Platforms>x64;x86;ARM64</Platforms>
+    <RuntimeIdentifiers>win-x64;win-x86;win-arm64</RuntimeIdentifiers>
+    <!-- dotnet CLI 默认传 Platform=AnyCPU，WinUI 3 不支持，这里兜底到 x64 -->
+    <Platform Condition="'$(Platform)' == '' or '$(Platform)' == 'AnyCPU'">x64</Platform>
+
+    <UseWinUI>true</UseWinUI>
+    <EnableMsixTooling>true</EnableMsixTooling>
+    <WindowsPackageType>MSIX</WindowsPackageType>
+    <!-- 依赖已安装的 Windows App Runtime 2.7.0 框架包，不打自包含 -->
+    <WindowsAppSDKSelfContained>false</WindowsAppSDKSelfContained>
+
+    <!-- 禁用 XAML 生成的 Main，改用 Program.cs 内的单实例入口 -->
+    <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
+
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <PublishTrimmed>false</PublishTrimmed>
+    <PublishAot>false</PublishAot>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="$(SnapOcrWindowsAppSdkVersion)" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="$(SnapOcrSdkBuildToolsVersion)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Assets\**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

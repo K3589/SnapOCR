@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="SnapOCR.Settings.SettingsWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Grid x:Name="Root" Background="Transparent">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- 自定义标题栏 -->
+        <Grid x:Name="AppTitleBar" Height="52" Padding="20,0,16,0">
+            <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                <FontIcon Glyph="&#xE7C3;" FontSize="15" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                <TextBlock
+                    Text="SnapOCR 设置"
+                    FontSize="13"
+                    VerticalAlignment="Center"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            </StackPanel>
+        </Grid>
+
+        <ScrollViewer Grid.Row="1" Padding="0">
+            <StackPanel Margin="20,0,20,8" Spacing="12">
+
+                <!-- 常规 -->
+                <Border
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8">
+                    <StackPanel>
+
+                        <Grid Padding="16,14" ColumnSpacing="16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Spacing="2" VerticalAlignment="Center">
+                                <TextBlock Text="全局热键" FontSize="14" />
+                                <TextBlock
+                                    Text="按下后立即进入框选"
+                                    FontSize="12"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            </StackPanel>
+                            <Button
+                                x:Name="HotkeyButton"
+                                Grid.Column="1"
+                                MinWidth="188"
+                                HorizontalContentAlignment="Center"
+                                Click="OnHotkeyButtonClick" />
+                        </Grid>
+
+                        <Border BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" />
+
+                        <Grid Padding="16,14" ColumnSpacing="16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Spacing="2" VerticalAlignment="Center">
+                                <TextBlock Text="OCR 语言" FontSize="14" />
+                                <TextBlock
+                                    x:Name="OcrLanguageHint"
+                                    Text="使用系统内置的离线识别引擎"
+                                    FontSize="12"
+                                    TextWrapping="Wrap"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            </StackPanel>
+                            <ComboBox
+                                x:Name="LanguageCombo"
+                                Grid.Column="1"
+                                MinWidth="188"
+                                PlaceholderText="跟随系统" />
+                        </Grid>
+
+                        <Border BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" />
+
+                        <Grid Padding="16,12" ColumnSpacing="16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Spacing="2" VerticalAlignment="Center">
+                                <TextBlock Text="自动复制到剪贴板" FontSize="14" />
+                                <TextBlock
+                                    Text="识别完成后直接可粘贴"
+                                    FontSize="12"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            </StackPanel>
+                            <ToggleSwitch x:Name="AutoCopySwitch" Grid.Column="1" OnContent="" OffContent="" />
+                        </Grid>
+
+                        <Border BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" />
+
+                        <Grid Padding="16,12" ColumnSpacing="16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Spacing="2" VerticalAlignment="Center">
+                                <TextBlock Text="显示结果提示" FontSize="14" />
+                                <TextBlock
+                                    Text="右下角显示约 1 秒的轻提示"
+                                    FontSize="12"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            </StackPanel>
+                            <ToggleSwitch x:Name="ToastSwitch" Grid.Column="1" OnContent="" OffContent="" />
+                        </Grid>
+
+                        <Border BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" />
+
+                        <Grid Padding="16,12" ColumnSpacing="16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Spacing="2" VerticalAlignment="Center">
+                                <TextBlock Text="开机自动启动" FontSize="14" />
+                                <TextBlock
+                                    x:Name="StartupHint"
+                                    Text="随系统登录静默启动，只留一个托盘图标"
+                                    FontSize="12"
+                                    TextWrapping="Wrap"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            </StackPanel>
+                            <ToggleSwitch x:Name="StartupSwitch" Grid.Column="1" OnContent="" OffContent="" />
+                        </Grid>
+
+                        <Border BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" />
+
+                        <Grid Padding="16,12" ColumnSpacing="16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Spacing="2" VerticalAlignment="Center">
+                                <TextBlock Text="跟随系统截图" FontSize="14" />
+                                <TextBlock
+                                    Text="Win+Shift+S 截图后自动把图片取成文字"
+                                    FontSize="12"
+                                    TextWrapping="Wrap"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            </StackPanel>
+                            <ToggleSwitch x:Name="ClipboardSwitch" Grid.Column="1" OnContent="" OffContent="" />
+                        </Grid>
+
+                    </StackPanel>
+                </Border>
+
+                <!-- 语言包缺失提示 -->
+                <InfoBar
+                    x:Name="LanguageInfoBar"
+                    IsOpen="False"
+                    IsClosable="True"
+                    Severity="Warning"
+                    Title="缺少中文 OCR 语言包"
+                    Message="系统里没有中文识别引擎，SnapOCR 无法识别中文。安装后无需重启应用。">
+                    <InfoBar.ActionButton>
+                        <Button Content="复制安装命令" Click="OnCopyLanguageCommandClick" />
+                    </InfoBar.ActionButton>
+                </InfoBar>
+
+                <TextBlock
+                    Margin="4,0,0,0"
+                    FontSize="12"
+                    TextWrapping="Wrap"
+                    Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                    Text="全部处理都在本机完成：不联网、不上传像素、不往磁盘写图片。" />
+
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- 底部操作区 -->
+        <Grid
+            Grid.Row="2"
+            Padding="20,12,20,16"
+            ColumnSpacing="8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <TextBlock
+                x:Name="StatusText"
+                VerticalAlignment="Center"
+                FontSize="12"
+                TextWrapping="Wrap"
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+
+            <Button Grid.Column="1" Content="取消" MinWidth="88" Click="OnCancelClick" />
+            <Button
+                Grid.Column="2"
+                Content="保存"
+                MinWidth="88"
+                Style="{ThemeResource AccentButtonStyle}"
+                Click="OnSaveClick" />
+        </Grid>
+    </Grid>
+</Window>

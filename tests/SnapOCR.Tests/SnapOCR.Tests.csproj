@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <!--
+    测试只覆盖纯逻辑，所以直接把源文件链进来，不引用 WinUI 主工程。
+    好处：测试不需要 Windows App Runtime，dotnet test 能在任何机器上跑。
+  -->
+  <ItemGroup>
+    <Compile Include="..\..\src\SnapOCR\Capture\DpiHelper.cs" Link="Linked\DpiHelper.cs" />
+    <Compile Include="..\..\src\SnapOCR\Ocr\TextComposer.cs" Link="Linked\TextComposer.cs" />
+    <Compile Include="..\..\src\SnapOCR\Settings\HotkeyDefinition.cs" Link="Linked\HotkeyDefinition.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.12.0" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
+  </ItemGroup>
+
+</Project>

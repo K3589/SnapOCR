@@ -1,0 +1,30 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    # WinUI 3 只能在 Windows 上构建；XAML 编译器需要 Windows SDK 工具链。
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          # 与 Directory.Build.props 里的 SnapOcrDotnetSdkVersion 对齐
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore SnapOCR.sln
+
+      - name: Build
+        run: dotnet build SnapOCR.sln -c Release --no-restore
+
+      - name: Test
+        run: dotnet test tests/SnapOCR.Tests/SnapOCR.Tests.csproj -c Release --no-build --logger "console;verbosity=normal"

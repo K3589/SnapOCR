@@ -1,0 +1,25 @@
+<Project>
+
+  <!--
+    所有版本号都是 2026-11-26 在本机实测得到的，不要凭记忆修改。
+    实测环境：dotnet 10.0.403 / Windows SDK 10.0.26100.0 / Windows App Runtime 2.7.0
+    探测方式见 README.md 的「环境探测」一节。
+    注意：XML 注释里不能出现连续两个减号，所以这里不直接写命令行。
+  -->
+  <PropertyGroup>
+    <SnapOcrWindowsAppSdkVersion>2.7.0</SnapOcrWindowsAppSdkVersion>
+    <SnapOcrSdkBuildToolsVersion>10.0.26100.4654</SnapOcrSdkBuildToolsVersion>
+    <SnapOcrTargetFramework>net10.0-windows10.0.26100.0</SnapOcrTargetFramework>
+    <SnapOcrMinPlatformVersion>10.0.19041.0</SnapOcrMinPlatformVersion>
+    <SnapOcrDotnetSdkVersion>10.0.403</SnapOcrDotnetSdkVersion>
+    <SnapOcrWindowsSdkVersion>10.0.26100.0</SnapOcrWindowsSdkVersion>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <InvariantGlobalization>false</InvariantGlobalization>
+  </PropertyGroup>
+
+</Project>
