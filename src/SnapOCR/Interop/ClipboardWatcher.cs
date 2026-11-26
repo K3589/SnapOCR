@@ -14,6 +14,7 @@ public sealed class ClipboardWatcher : IDisposable
     private readonly IntPtr _hwnd;
     private uint _suppressedSequence;
     private bool _listening;
+    private bool _subclassed;
     private bool _disposed;
 
     public ClipboardWatcher(IntPtr hwnd)
@@ -53,7 +54,7 @@ public sealed class ClipboardWatcher : IDisposable
 
     private void Attach()
     {
-        if (_hwnd == IntPtr.Zero)
+        if (_hwnd == IntPtr.Zero || _subclassed)
         {
             return;
         }
@@ -63,7 +64,7 @@ public sealed class ClipboardWatcher : IDisposable
             Live[_hwnd] = this;
         }
 
-        NativeMethods.SetWindowSubclass(_hwnd, CallbackProc, SubclassId, IntPtr.Zero);
+        _subclassed = NativeMethods.SetWindowSubclass(_hwnd, CallbackProc, SubclassId, IntPtr.Zero);
     }
 
     private static IntPtr Callback(IntPtr hWnd, uint uMsg, IntPtr wParam, IntPtr lParam, IntPtr uIdSubclass, IntPtr dwRefData)
@@ -111,6 +112,12 @@ public sealed class ClipboardWatcher : IDisposable
 
         _disposed = true;
         Stop();
+
+        if (_subclassed)
+        {
+            NativeMethods.RemoveWindowSubclass(_hwnd, CallbackProc, SubclassId);
+            _subclassed = false;
+        }
 
         lock (LiveLock)
         {

@@ -9,7 +9,7 @@ namespace SnapOCR.Ocr;
 /// Windows.Media.Ocr 的本地离线实现。进程内单例，启动时预热。
 /// 整个过程在本地完成，不联网、不上传像素。
 /// </summary>
-public sealed class WindowsOcrService : IOcrService
+public sealed class WindowsOcrService : IOcrService, IDisposable
 {
     private static readonly TimeSpan RecognitionTimeout = TimeSpan.FromSeconds(20);
 
@@ -18,6 +18,7 @@ public sealed class WindowsOcrService : IOcrService
     private string _languageTag = string.Empty;
     private string? _availabilityMessage;
     private bool _warmedUp;
+    private bool _disposed;
 
     public bool IsAvailable => _engine is not null;
 
@@ -57,9 +58,27 @@ public sealed class WindowsOcrService : IOcrService
 
     public async Task<bool> WarmupAsync(string languageTag)
     {
-        await _gate.WaitAsync().ConfigureAwait(false);
+        if (_disposed)
+        {
+            return false;
+        }
+
         try
         {
+            await _gate.WaitAsync().ConfigureAwait(false);
+        }
+        catch (ObjectDisposedException)
+        {
+            return false;
+        }
+
+        try
+        {
+            if (_disposed)
+            {
+                return false;
+            }
+
             if (_engine is not null
                 && _warmedUp
                 && string.Equals(_languageTag, languageTag, StringComparison.OrdinalIgnoreCase))
@@ -96,7 +115,7 @@ public sealed class WindowsOcrService : IOcrService
         }
         finally
         {
-            _gate.Release();
+            ReleaseGateSafe();
         }
     }
 
@@ -107,6 +126,11 @@ public sealed class WindowsOcrService : IOcrService
             return OcrOutcome.Failed("选区为空。");
         }
 
+        if (_disposed)
+        {
+            return OcrOutcome.Failed("OCR 服务已关闭。");
+        }
+
         try
         {
             await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
@@ -115,14 +139,30 @@ public sealed class WindowsOcrService : IOcrService
         {
             return OcrOutcome.Failed("已取消。");
         }
+        catch (ObjectDisposedException)
+        {
+            return OcrOutcome.Failed("OCR 服务已关闭。");
+        }
 
         var stopwatch = Stopwatch.StartNew();
         try
         {
+            if (_disposed)
+            {
+                return OcrOutcome.Failed("OCR 服务已关闭。");
+            }
+
             var engine = _engine;
             if (engine is null)
             {
-                return OcrOutcome.Failed(_availabilityMessage ?? "OCR 引擎未初始化。");
+                // 启动后立即按热键时 WarmupAsync 可能还没抢到锁，按需懒初始化兜底。
+                engine = CreateEngine(_languageTag);
+                if (engine is null)
+                {
+                    return OcrOutcome.Failed(_availabilityMessage ?? "OCR 引擎未初始化。");
+                }
+
+                _engine = engine;
             }
 
             using var bitmap = await SoftwareBitmapFactory
@@ -163,6 +203,10 @@ public sealed class WindowsOcrService : IOcrService
                 }
             }
         }
+        catch (TimeoutException)
+        {
+            return OcrOutcome.Failed("识别超时。");
+        }
         catch (OperationCanceledException)
         {
             return OcrOutcome.Failed("识别超时或已取消。");
@@ -174,7 +218,7 @@ public sealed class WindowsOcrService : IOcrService
         finally
         {
             stopwatch.Stop();
-            _gate.Release();
+            ReleaseGateSafe();
         }
     }
 
@@ -213,5 +257,28 @@ public sealed class WindowsOcrService : IOcrService
             _availabilityMessage = ex.Message;
             return null;
         }
+    }
+
+    private void ReleaseGateSafe()
+    {
+        try
+        {
+            _gate.Release();
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        _engine = null;
+        _gate.Dispose();
     }
 }

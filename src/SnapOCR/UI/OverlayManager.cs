@@ -7,10 +7,11 @@ namespace SnapOCR.UI;
 /// 管理「每块显示器一个覆盖层窗口」：预创建、同步显示器变化、分发选区事件。
 /// 跨屏拖拽时所有窗口共享同一个全局选区，各自裁出自己那块来画。
 /// </summary>
-public sealed class OverlayManager
+public sealed class OverlayManager : IDisposable
 {
     private readonly List<OverlayWindow> _windows = new();
     private bool _isShowing;
+    private bool _disposed;
 
     /// <summary>用户完成框选，参数是虚拟桌面坐标下的物理矩形。</summary>
     public event EventHandler<PixelRect>? SelectionCompleted;
@@ -23,7 +24,15 @@ public sealed class OverlayManager
     public int WindowCount => _windows.Count;
 
     /// <summary>启动时预创建所有覆盖层窗口（此时还不可见）。</summary>
-    public void Prepare() => SyncWindows();
+    public void Prepare()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        SyncWindows();
+    }
 
     /// <summary>
     /// 显示覆盖层。传入的是热键按下瞬间抓下来的冻结帧，必须与当前显示器一一对应。
@@ -31,7 +40,7 @@ public sealed class OverlayManager
     /// </summary>
     public async Task<bool> ShowAsync(IReadOnlyList<CapturedFrame> frames)
     {
-        if (frames is null || frames.Count == 0)
+        if (_disposed || frames is null || frames.Count == 0)
         {
             return false;
         }
@@ -133,19 +142,7 @@ public sealed class OverlayManager
             return _windows.Count > 0;
         }
 
-        foreach (var window in _windows)
-        {
-            try
-            {
-                window.Close();
-            }
-            catch (Exception)
-            {
-                // 已经关掉的窗口忽略。
-            }
-        }
-
-        _windows.Clear();
+        CloseAllWindows();
 
         foreach (var monitor in monitors)
         {
@@ -159,6 +156,40 @@ public sealed class OverlayManager
         }
 
         return _windows.Count > 0;
+    }
+
+    private void CloseAllWindows()
+    {
+        foreach (var window in _windows)
+        {
+            window.DragStarted -= OnDragStarted;
+            window.DragUpdated -= OnDragUpdated;
+            window.DragCompleted -= OnDragCompleted;
+            window.CancelRequested -= OnCancelRequested;
+
+            try
+            {
+                window.Close();
+            }
+            catch (Exception)
+            {
+                // 已经关掉的窗口忽略。
+            }
+        }
+
+        _windows.Clear();
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        _isShowing = false;
+        CloseAllWindows();
     }
 
     private void OnDragStarted(object? sender, EventArgs e)
