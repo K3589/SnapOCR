@@ -375,6 +375,9 @@ internal static class NativeMethods
     [DllImport("kernel32.dll", SetLastError = true)]
     public static extern IntPtr GlobalFree(IntPtr hMem);
 
+    [DllImport("kernel32.dll", SetLastError = true)]
+    public static extern UIntPtr GlobalSize(IntPtr hMem);
+
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, EntryPoint = "GetModuleHandleW")]
     public static extern IntPtr GetModuleHandle(string? lpModuleName);
 

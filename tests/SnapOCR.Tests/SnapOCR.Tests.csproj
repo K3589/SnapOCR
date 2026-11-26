@@ -13,6 +13,7 @@
   -->
   <ItemGroup>
     <Compile Include="..\..\src\SnapOCR\Capture\DpiHelper.cs" Link="Linked\DpiHelper.cs" />
+    <Compile Include="..\..\src\SnapOCR\Interop\DibParser.cs" Link="Linked\DibParser.cs" />
     <Compile Include="..\..\src\SnapOCR\Ocr\TextComposer.cs" Link="Linked\TextComposer.cs" />
     <Compile Include="..\..\src\SnapOCR\Settings\HotkeyDefinition.cs" Link="Linked\HotkeyDefinition.cs" />
   </ItemGroup>
