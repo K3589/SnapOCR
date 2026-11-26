@@ -143,7 +143,7 @@
                             <StackPanel Spacing="2" VerticalAlignment="Center">
                                 <TextBlock Text="跟随系统截图" FontSize="14" />
                                 <TextBlock
-                                    Text="Win+Shift+S 截图后自动把图片取成文字"
+                                    Text="Win+Shift+S 截图后自动取字（开启自动复制时会替换剪贴板图片）"
                                     FontSize="12"
                                     TextWrapping="Wrap"
                                     Foreground="{ThemeResource TextFillColorSecondaryBrush}" />

@@ -72,7 +72,18 @@ public partial class App : Application
         _hotkey.Pressed += (_, _) => _ = BeginCaptureAsync();
 
         _clipboardWatcher = new ClipboardWatcher(hwnd);
-        _clipboardWatcher.ImageAvailable += (_, _) => _ = CaptureFromClipboardAsync();
+        _clipboardWatcher.ImageAvailable += (_, _) =>
+        {
+            var dispatcher = _host?.DispatcherQueue;
+            if (dispatcher is not null)
+            {
+                dispatcher.TryEnqueue(DispatcherQueuePriority.Normal, () => _ = CaptureFromClipboardAsync());
+            }
+            else
+            {
+                _ = CaptureFromClipboardAsync();
+            }
+        };
 
         _tray.Show("SnapOCR · 框选即取字");
         AppLog.Write($"托盘图标=Shell_NotifyIcon({_tray.IsVisible})");
@@ -262,6 +273,7 @@ public partial class App : Application
             return;
         }
 
+        var acquiredBusy = false;
         try
         {
             AppLog.Write("收到剪贴板变化，检查是否图片");
@@ -274,6 +286,7 @@ public partial class App : Application
             if (hasBitmap)
             {
                 _busy = true;
+                acquiredBusy = true;
                 var reference = await content.GetBitmapAsync();
                 using var stream = await reference.OpenReadAsync();
                 var decoder = await Windows.Graphics.Imaging.BitmapDecoder.CreateAsync(stream);
@@ -293,6 +306,7 @@ public partial class App : Application
                 }
 
                 _busy = true;
+                acquiredBusy = true;
                 var (pixels, width, height) = dib.Value;
                 request = new OcrRequest(pixels, width, height, width * 4);
             }
@@ -304,16 +318,27 @@ public partial class App : Application
                 return;
             }
 
-            var copied = await ClipboardHelper.TrySetTextAsync(outcome.Text, _host!.Handle);
-            if (copied)
+            if (_settings.AutoCopy)
             {
-                _clipboardWatcher?.SuppressCurrentSequence();
-                if (_settings.ShowResultToast)
+                var copied = await ClipboardHelper.TrySetTextAsync(outcome.Text, _host!.Handle);
+                if (copied)
                 {
-                    _toast!.ShowToast($"已复制 {outcome.Text.Length} 个字符");
-                }
+                    _clipboardWatcher?.SuppressCurrentSequence();
+                    if (_settings.ShowResultToast)
+                    {
+                        _toast!.ShowToast($"已复制 {outcome.Text.Length} 个字符");
+                    }
 
-                AppLog.Write($"剪贴板取字成功，{outcome.Text.Length} 字");
+                    AppLog.Write($"剪贴板取字成功，{outcome.Text.Length} 字");
+                }
+                else
+                {
+                    Notify("写入剪贴板失败，文本没有丢，可重试一次。", isError: true);
+                }
+            }
+            else if (_settings.ShowResultToast)
+            {
+                _toast!.ShowToast($"已识别 {outcome.Text.Length} 个字符（未复制）");
             }
         }
         catch (Exception ex)
@@ -322,7 +347,10 @@ public partial class App : Application
         }
         finally
         {
-            _busy = false;
+            if (acquiredBusy)
+            {
+                _busy = false;
+            }
         }
     }
 

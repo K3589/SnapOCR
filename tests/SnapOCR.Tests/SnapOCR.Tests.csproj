@@ -13,6 +13,7 @@
   -->
   <ItemGroup>
     <Compile Include="..\..\src\SnapOCR\Interop\NativeMethods.cs" Link="Linked\NativeMethods.cs" />
+    <Compile Include="..\..\src\SnapOCR\Interop\DibParser.cs" Link="Linked\DibParser.cs" />
     <Compile Include="..\..\src\SnapOCR\Capture\DpiHelper.cs" Link="Linked\DpiHelper.cs" />
     <Compile Include="..\..\src\SnapOCR\Capture\MonitorEnumerator.cs" Link="Linked\MonitorEnumerator.cs" />
     <Compile Include="..\..\src\SnapOCR\Capture\ScreenCapture.cs" Link="Linked\ScreenCapture.cs" />

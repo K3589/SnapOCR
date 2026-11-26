@@ -44,63 +44,60 @@ public static class SoftwareBitmapFactory
         }
     }
 
-    /// <summary>把高度不足 <see cref="MinOcrHeight"/> 的图放大（最多 <see cref="MaxUpscale"/> 倍）。</summary>
-    public static async Task<SoftwareBitmap> EnsureMinimumHeightAsync(SoftwareBitmap source, int minHeight = MinOcrHeight, double maxScale = MaxUpscale)
+    /// <summary>
+    /// 一次性计算满足「小图最小高度放大」与「OCR 最大边长上限」的目标尺寸，
+    /// 避免超宽矮图先放大超限再缩小而做两次 BMP 内存编解码。
+    /// </summary>
+    public static Task<SoftwareBitmap> PrepareForOcrAsync(
+        SoftwareBitmap source,
+        int minHeight = MinOcrHeight,
+        double maxScale = MaxUpscale,
+        int maxDimension = 0)
     {
         ArgumentNullException.ThrowIfNull(source);
 
-        if (source.PixelHeight >= minHeight || minHeight <= 0 || maxScale <= 1.0)
+        var scale = 1.0;
+        if (minHeight > 0 && maxScale > 1.0 && source.PixelHeight < minHeight)
         {
-            return source;
+            scale = Math.Min(maxScale, (double)minHeight / source.PixelHeight);
         }
 
-        var scale = Math.Min(maxScale, (double)minHeight / source.PixelHeight);
+        var longest = Math.Max(source.PixelWidth, source.PixelHeight);
+        if (maxDimension > 0 && longest * scale > maxDimension)
+        {
+            scale = (double)maxDimension / longest;
+        }
+
         var targetWidth = (uint)Math.Max(1, Math.Round(source.PixelWidth * scale));
         var targetHeight = (uint)Math.Max(1, Math.Round(source.PixelHeight * scale));
+        if (maxDimension > 0)
+        {
+            targetWidth = Math.Min(targetWidth, (uint)maxDimension);
+            targetHeight = Math.Min(targetHeight, (uint)maxDimension);
+        }
 
         if (targetWidth == source.PixelWidth && targetHeight == source.PixelHeight)
         {
-            return source;
+            return Task.FromResult(source);
         }
 
+        return ScaleBitmapAsync(source, targetWidth, targetHeight);
+    }
+
+    /// <summary>把高度不足 <see cref="MinOcrHeight"/> 的图放大（最多 <see cref="MaxUpscale"/> 倍）。</summary>
+    public static Task<SoftwareBitmap> EnsureMinimumHeightAsync(SoftwareBitmap source, int minHeight = MinOcrHeight, double maxScale = MaxUpscale)
+        => PrepareForOcrAsync(source, minHeight, maxScale, maxDimension: 0);
+
+    /// <summary>按 OcrEngine.MaxImageDimension 限制缩小（极少触发，防止超大屏全选时抛异常）。</summary>
+    public static Task<SoftwareBitmap> EnsureMaximumDimensionAsync(SoftwareBitmap source, int maxDimension)
+        => PrepareForOcrAsync(source, minHeight: 0, maxScale: 1.0, maxDimension);
+
+    private static async Task<SoftwareBitmap> ScaleBitmapAsync(SoftwareBitmap source, uint targetWidth, uint targetHeight)
+    {
         var transform = new BitmapTransform
         {
             ScaledWidth = targetWidth,
             ScaledHeight = targetHeight,
-            InterpolationMode = BitmapInterpolationMode.Fant,
-        };
-
-        using var stream = new InMemoryRandomAccessStream();
-        var encoder = await BitmapEncoder.CreateAsync(BitmapEncoder.BmpEncoderId, stream);
-        encoder.SetSoftwareBitmap(source);
-        await encoder.FlushAsync();
-
-        stream.Seek(0);
-        var decoder = await BitmapDecoder.CreateAsync(stream);
-        return await decoder.GetSoftwareBitmapAsync(
-            BitmapPixelFormat.Bgra8,
-            BitmapAlphaMode.Premultiplied,
-            transform,
-            ExifOrientationMode.IgnoreExifOrientation,
-            ColorManagementMode.DoNotColorManage);
-    }
-
-    /// <summary>按 OcrEngine.MaxImageDimension 限制缩小（极少触发，防止超大屏全选时抛异常）。</summary>
-    public static async Task<SoftwareBitmap> EnsureMaximumDimensionAsync(SoftwareBitmap source, int maxDimension)
-    {
-        ArgumentNullException.ThrowIfNull(source);
-
-        var longest = Math.Max(source.PixelWidth, source.PixelHeight);
-        if (maxDimension <= 0 || longest <= maxDimension)
-        {
-            return source;
-        }
-
-        var scale = (double)maxDimension / longest;
-        var transform = new BitmapTransform
-        {
-            ScaledWidth = (uint)Math.Max(1, Math.Round(source.PixelWidth * scale)),
-            ScaledHeight = (uint)Math.Max(1, Math.Round(source.PixelHeight * scale)),
             InterpolationMode = BitmapInterpolationMode.Fant,
         };
 

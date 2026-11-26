@@ -169,20 +169,13 @@ public sealed class WindowsOcrService : IOcrService, IDisposable
                 .CreateFromBgraAsync(request.Bgra, request.Width, request.Height, request.Stride)
                 .ConfigureAwait(false);
 
-            var prepared = await SoftwareBitmapFactory
-                .EnsureMinimumHeightAsync(bitmap, SoftwareBitmapFactory.MinOcrHeight, SoftwareBitmapFactory.MaxUpscale)
+            var input = await SoftwareBitmapFactory
+                .PrepareForOcrAsync(
+                    bitmap,
+                    SoftwareBitmapFactory.MinOcrHeight,
+                    SoftwareBitmapFactory.MaxUpscale,
+                    (int)OcrEngine.MaxImageDimension)
                 .ConfigureAwait(false);
-
-            SoftwareBitmap? shrunk = null;
-            var maxDimension = (int)OcrEngine.MaxImageDimension;
-            if (Math.Max(prepared.PixelWidth, prepared.PixelHeight) > maxDimension)
-            {
-                shrunk = await SoftwareBitmapFactory
-                    .EnsureMaximumDimensionAsync(prepared, maxDimension)
-                    .ConfigureAwait(false);
-            }
-
-            var input = shrunk ?? prepared;
 
             try
             {
@@ -196,10 +189,9 @@ public sealed class WindowsOcrService : IOcrService, IDisposable
             }
             finally
             {
-                shrunk?.Dispose();
-                if (!ReferenceEquals(prepared, bitmap))
+                if (!ReferenceEquals(input, bitmap))
                 {
-                    prepared.Dispose();
+                    input.Dispose();
                 }
             }
         }
