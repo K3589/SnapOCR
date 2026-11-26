@@ -4,7 +4,7 @@ namespace SnapOCR.Settings;
 
 /// <summary>
 /// 开机自启。打包应用必须走 StartupTask（直接写 HKCU\Run 会让 exe 脱离包标识，起不来）。
-/// TaskId 必须与 Package.appxmanifest 里的 uap:StartupTask 一致。
+/// TaskId 必须与 Package.appxmanifest 里的 desktop:StartupTask 一致。
 /// </summary>
 public static class StartupHelper
 {

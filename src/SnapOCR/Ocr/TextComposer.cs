@@ -85,10 +85,9 @@ public static class TextComposer
 
     /// <summary>是否 CJK 字符。用于判断某段文本要不要按「逐字」规则处理。</summary>
     public static bool IsCjk(char c)
-        => c >= 0x2E80 && c <= 0x9FFF        // CJK 部首扩展 ~ 统一表意文字
+        => c >= 0x2E80 && c <= 0x9FFF        // CJK 部首扩展、标点（3000-303F）、假名与统一表意文字
            || c >= 0xF900 && c <= 0xFAFF     // 兼容表意文字
-           || c >= 0xFF00 && c <= 0xFFEF     // 全角符号
-           || c >= 0x3000 && c <= 0x303F;    // CJK 标点
+           || c >= 0xFF00 && c <= 0xFFEF;    // 全角符号
 
     /// <summary>整段文本里 CJK 字符是否占多数（用于选择排版策略）。</summary>
     public static bool IsMostlyCjk(string text)
