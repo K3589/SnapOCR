@@ -15,6 +15,8 @@ namespace SnapOCR.UI;
 public sealed partial class ResultToast : Window
 {
     private readonly IntPtr _hwnd;
+    private readonly SolidColorBrush _successBrush = new(Windows.UI.Color.FromArgb(255, 98, 210, 138));
+    private readonly SolidColorBrush _errorBrush = new(Windows.UI.Color.FromArgb(255, 240, 160, 90));
     private Storyboard? _storyboard;
 
     public ResultToast()
@@ -33,12 +35,12 @@ public sealed partial class ResultToast : Window
             presenter.IsMinimizable = false;
         }
 
-        // 关键：绝不抢焦点，否则用户正准备 Ctrl+V 时输入会被打断。
+        // 关键：绝不抢焦点，且点击穿透，否则用户正准备 Ctrl+V 或点击下方界面时会被打断。
         var exStyle = NativeMethods.GetWindowLongPtr(_hwnd, NativeMethods.GWL_EXSTYLE).ToInt64();
         NativeMethods.SetWindowLongPtr(
             _hwnd,
             NativeMethods.GWL_EXSTYLE,
-            new IntPtr(exStyle | NativeMethods.WS_EX_NOACTIVATE | NativeMethods.WS_EX_TOOLWINDOW));
+            new IntPtr(exStyle | NativeMethods.WS_EX_NOACTIVATE | NativeMethods.WS_EX_TOOLWINDOW | NativeMethods.WS_EX_TRANSPARENT));
 
         // Win11 圆角（DWM 负责裁切，XAML 内容不用自己做四角透明）。
         var preference = NativeMethods.DWMWCP_ROUND;
@@ -64,9 +66,7 @@ public sealed partial class ResultToast : Window
     {
         MessageText.Text = message;
         ToastIcon.Glyph = isError ? "\uE7BA" : "\uE73E";
-        ToastIcon.Foreground = isError
-            ? new SolidColorBrush(Windows.UI.Color.FromArgb(255, 240, 160, 90))
-            : new SolidColorBrush(Windows.UI.Color.FromArgb(255, 98, 210, 138));
+        ToastIcon.Foreground = isError ? _errorBrush : _successBrush;
 
         PositionNearCursor();
 
@@ -75,7 +75,7 @@ public sealed partial class ResultToast : Window
         ToastCard.Opacity = 0;
         ToastTranslate.Y = 10;
 
-        AppWindow.Show();
+        AppWindow.Show(false);
         _storyboard.Begin();
     }
 

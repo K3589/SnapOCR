@@ -107,7 +107,7 @@
                             <StackPanel Spacing="2" VerticalAlignment="Center">
                                 <TextBlock Text="显示结果提示" FontSize="14" />
                                 <TextBlock
-                                    Text="右下角显示约 1 秒的轻提示"
+                                    Text="屏幕底部显示约 1 秒的轻提示"
                                     FontSize="12"
                                     Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                             </StackPanel>
