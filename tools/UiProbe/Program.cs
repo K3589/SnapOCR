@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using SnapOCR.Capture;
 using SnapOCR.Ocr;
+using SnapOCR.Settings;
 using SnapOCR.Tools;
 
 namespace SnapOCR.UiProbe;
@@ -238,11 +239,14 @@ internal static class Program
 
     private static async Task<(string Text, PixelRect Rect)?> FindTargetLineAsync(WindowsOcrService service, CapturedFrame frame)
     {
-        _ = service;
         var cropped = frame.Crop(frame.Bounds);
 
-        // 用引擎给出的逐行矩形。OcrOutcome 不带几何信息，这里直接调底层引擎拿 Lines。
-        var engine = Windows.Media.Ocr.OcrEngine.TryCreateFromLanguage(new Windows.Globalization.Language("zh-Hans-CN"));
+        // 用引擎给出的逐行矩形。OcrOutcome 不带几何信息，这里按本机已安装语言创建底层引擎。
+        var preferredTag = service.AvailableLanguages.FirstOrDefault(l => l.Tag.StartsWith("zh", StringComparison.OrdinalIgnoreCase)).Tag
+                           ?? service.AvailableLanguages.FirstOrDefault().Tag;
+        var engine = !string.IsNullOrWhiteSpace(preferredTag)
+            ? Windows.Media.Ocr.OcrEngine.TryCreateFromLanguage(new Windows.Globalization.Language(preferredTag))
+            : Windows.Media.Ocr.OcrEngine.TryCreateFromUserProfileLanguages();
         if (engine is null)
         {
             return null;
@@ -359,37 +363,33 @@ internal static class Program
 
     private static (string Display, byte[] Modifiers, byte Key) ParseHotkey(string text)
     {
-        var parts = text.Split('+', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        var modifiers = new List<byte>();
-        byte key = VkT;
-
-        for (var i = 0; i < parts.Length; i++)
+        if (HotkeyDefinition.TryParse(text, out var definition))
         {
-            var part = parts[i];
-            if (i == parts.Length - 1)
+            var modifiers = new List<byte>(4);
+            if (definition.Modifiers.HasFlag(HotkeyModifiers.Win))
             {
-                key = part.ToUpperInvariant() switch
-                {
-                    "SPACE" => 0x20,
-                    "ENTER" => 0x0D,
-                    "TAB" => 0x09,
-                    "PRINTSCREEN" => 0x2C,
-                    _ => (byte)char.ToUpperInvariant(part[0]),
-                };
-                continue;
+                modifiers.Add(VkLWin);
             }
 
-            modifiers.Add(part.ToLowerInvariant() switch
+            if (definition.Modifiers.HasFlag(HotkeyModifiers.Control))
             {
-                "win" or "windows" => VkLWin,
-                "ctrl" or "control" => VkControl,
-                "shift" => VkShift,
-                "alt" => 0x12,
-                _ => VkControl,
-            });
+                modifiers.Add(VkControl);
+            }
+
+            if (definition.Modifiers.HasFlag(HotkeyModifiers.Alt))
+            {
+                modifiers.Add(0x12);
+            }
+
+            if (definition.Modifiers.HasFlag(HotkeyModifiers.Shift))
+            {
+                modifiers.Add(VkShift);
+            }
+
+            return (definition.ToString(), modifiers.ToArray(), (byte)definition.VirtualKey);
         }
 
-        return (text, modifiers.ToArray(), key);
+        return ("Ctrl+Shift+T", new byte[] { VkControl, VkShift }, VkT);
     }
 
     /// <summary>

@@ -12,9 +12,14 @@
     好处：测试不需要 Windows App Runtime，dotnet test 能在任何机器上跑。
   -->
   <ItemGroup>
+    <Compile Include="..\..\src\SnapOCR\Interop\NativeMethods.cs" Link="Linked\NativeMethods.cs" />
     <Compile Include="..\..\src\SnapOCR\Capture\DpiHelper.cs" Link="Linked\DpiHelper.cs" />
+    <Compile Include="..\..\src\SnapOCR\Capture\MonitorEnumerator.cs" Link="Linked\MonitorEnumerator.cs" />
+    <Compile Include="..\..\src\SnapOCR\Capture\ScreenCapture.cs" Link="Linked\ScreenCapture.cs" />
     <Compile Include="..\..\src\SnapOCR\Ocr\TextComposer.cs" Link="Linked\TextComposer.cs" />
+    <Compile Include="..\..\src\SnapOCR\Settings\AppSettings.cs" Link="Linked\AppSettings.cs" />
     <Compile Include="..\..\src\SnapOCR\Settings\HotkeyDefinition.cs" Link="Linked\HotkeyDefinition.cs" />
+    <Compile Include="..\..\src\SnapOCR\Settings\SettingsStore.cs" Link="Linked\SettingsStore.cs" />
   </ItemGroup>
 
   <ItemGroup>

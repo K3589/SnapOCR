@@ -23,6 +23,7 @@
     <Compile Include="..\..\src\SnapOCR\Ocr\TextComposer.cs" Link="Linked\TextComposer.cs" />
     <Compile Include="..\..\src\SnapOCR\Ocr\SoftwareBitmapFactory.cs" Link="Linked\SoftwareBitmapFactory.cs" />
     <Compile Include="..\..\src\SnapOCR\Ocr\WindowsOcrService.cs" Link="Linked\WindowsOcrService.cs" />
+    <Compile Include="..\..\src\SnapOCR\Settings\HotkeyDefinition.cs" Link="Linked\HotkeyDefinition.cs" />
     <Compile Include="..\Shared\PngWriter.cs" Link="Shared\PngWriter.cs" />
   </ItemGroup>
 
