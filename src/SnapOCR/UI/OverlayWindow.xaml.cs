@@ -1,3 +1,4 @@
+using Microsoft.UI.Input;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -11,6 +12,15 @@ using Windows.Foundation;
 using Windows.Graphics;
 
 namespace SnapOCR.UI;
+
+/// <summary>覆盖层根容器：在 WinUI 3 中通过 ProtectedCursor 原生显示十字准星光标。</summary>
+public sealed class CrosshairGrid : Grid
+{
+    public CrosshairGrid()
+    {
+        ProtectedCursor = InputSystemCursor.Create(InputSystemCursorShape.Cross);
+    }
+}
 
 /// <summary>
 /// 一块显示器上的框选覆盖层。窗口在启动时预创建，之后只做 Show/Hide，
@@ -30,7 +40,7 @@ public sealed partial class OverlayWindow : Window
     private double _dipWidth = 1;
     private double _dipHeight = 1;
     private bool _dragging;
-    private Point _origin;
+    private (int X, int Y) _originPixel;
     private bool _subclassed;
 
     public OverlayWindow()
@@ -129,7 +139,8 @@ public sealed partial class OverlayWindow : Window
 
         if (activate)
         {
-            // 只有拿到焦点的窗口才能收到 Esc；多屏时由管理器决定激活哪一块。
+            // 只有拿到焦点的窗口才能收到 Esc；后台热键唤起时配合 SetForegroundWindow 提升抢焦成功率。
+            NativeMethods.SetForegroundWindow(_hwnd);
             Activate();
         }
     }
@@ -193,17 +204,20 @@ public sealed partial class OverlayWindow : Window
         Place(SelectionBorder, left, top, selectionWidth, selectionHeight);
         SelectionBorder.Visibility = Visibility.Visible;
 
-        // 尺寸标签跟着选区走，贴着上边缘；贴近屏幕顶端时改放到选区内部。
+        // 尺寸标签跟着选区走，贴着上边缘；贴近屏幕顶端或右边缘时自动回退到可见范围内。
         var badgeTop = top - 30;
         if (badgeTop < 0)
         {
             badgeTop = top + 6;
         }
 
-        Canvas.SetLeft(SizeBadge, left + 4);
-        Canvas.SetTop(SizeBadge, badgeTop);
         SizeText.Text = $"{global.Width} × {global.Height}";
         SizeBadge.Visibility = Visibility.Visible;
+
+        var badgeWidth = SizeBadge.ActualWidth > 0 ? SizeBadge.ActualWidth : 112;
+        var badgeLeft = Math.Clamp(left + 4, 4, Math.Max(4, _dipWidth - badgeWidth - 4));
+        Canvas.SetLeft(SizeBadge, badgeLeft);
+        Canvas.SetTop(SizeBadge, badgeTop);
 
         HintBadge.Visibility = Visibility.Collapsed;
     }
@@ -243,11 +257,11 @@ public sealed partial class OverlayWindow : Window
         }
 
         _dragging = true;
-        _origin = point.Position;
+        _originPixel = GetCursorScreenPixel(point.Position);
         Root.CapturePointer(e.Pointer);
 
         DragStarted?.Invoke(this, EventArgs.Empty);
-        DragUpdated?.Invoke(this, BuildRect(_origin, _origin));
+        DragUpdated?.Invoke(this, PixelRect.FromCorners(_originPixel.X, _originPixel.Y, _originPixel.X, _originPixel.Y));
         e.Handled = true;
     }
 
@@ -258,8 +272,8 @@ public sealed partial class OverlayWindow : Window
             return;
         }
 
-        var current = e.GetCurrentPoint(Root).Position;
-        DragUpdated?.Invoke(this, BuildRect(_origin, current));
+        var current = GetCursorScreenPixel(e.GetCurrentPoint(Root).Position);
+        DragUpdated?.Invoke(this, PixelRect.FromCorners(_originPixel.X, _originPixel.Y, current.X, current.Y));
         e.Handled = true;
     }
 
@@ -271,10 +285,10 @@ public sealed partial class OverlayWindow : Window
         }
 
         _dragging = false;
-        var current = e.GetCurrentPoint(Root).Position;
+        var current = GetCursorScreenPixel(e.GetCurrentPoint(Root).Position);
         Root.ReleasePointerCapture(e.Pointer);
 
-        var rect = BuildRect(_origin, current);
+        var rect = PixelRect.FromCorners(_originPixel.X, _originPixel.Y, current.X, current.Y);
         DragCompleted?.Invoke(this, rect);
         e.Handled = true;
     }
@@ -290,11 +304,18 @@ public sealed partial class OverlayWindow : Window
         CancelRequested?.Invoke(this, EventArgs.Empty);
     }
 
-    private PixelRect BuildRect(Point fromDip, Point toDip)
+    /// <summary>
+    /// 优先用 Win32 GetCursorPos 取虚拟桌面物理坐标：混合 DPI 多屏跨屏拖拽时
+    /// 不会被起始窗口的 _dpi 错误缩放；取不到时回落到窗口内 DIP 换算。
+    /// </summary>
+    private (int X, int Y) GetCursorScreenPixel(Point fallbackDip)
     {
-        var from = ToScreenPixel(fromDip);
-        var to = ToScreenPixel(toDip);
-        return PixelRect.FromCorners(from.X, from.Y, to.X, to.Y);
+        if (NativeMethods.GetCursorPos(out var cursor))
+        {
+            return (cursor.X, cursor.Y);
+        }
+
+        return ToScreenPixel(fallbackDip);
     }
 
     /// <summary>窗口内 DIP 坐标 → 虚拟桌面物理像素坐标。负数/超界都合法（拖到别的屏）。</summary>
@@ -355,12 +376,6 @@ public sealed partial class OverlayWindow : Window
     private IntPtr OnMessage(IntPtr hWnd, uint uMsg, IntPtr wParam, IntPtr lParam)
     {
         if (uMsg == NativeMethods.WM_KEYDOWN && wParam.ToInt32() == (int)VirtualKeys.Escape)
-        {
-            CancelRequested?.Invoke(this, EventArgs.Empty);
-            return IntPtr.Zero;
-        }
-
-        if (uMsg == NativeMethods.WM_RBUTTONUP)
         {
             CancelRequested?.Invoke(this, EventArgs.Empty);
             return IntPtr.Zero;

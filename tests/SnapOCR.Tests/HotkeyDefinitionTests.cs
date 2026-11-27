@@ -90,5 +90,32 @@ public class HotkeyDefinitionTests
         Assert.Equal("7", HotkeyDefinition.GetKeyName(0x37));
         Assert.Equal("F12", HotkeyDefinition.GetKeyName(0x7B));
         Assert.Equal("Space", HotkeyDefinition.GetKeyName(0x20));
+        Assert.Equal("Numpad5", HotkeyDefinition.GetKeyName(0x65));
+        Assert.Equal("Grave", HotkeyDefinition.GetKeyName(0xC0));
+    }
+
+    [Theory]
+    [InlineData(0x60u)] // Numpad0
+    [InlineData(0x69u)] // Numpad9
+    [InlineData(0xC0u)] // OEM3 (`~)
+    [InlineData(0xBDu)] // OEMMinus
+    [InlineData(0xBBu)] // OEMPlus
+    [InlineData(0xDFu)] // 未命名扩展键，走 0xXX 兜底往返
+    public void RecordedNonAlphaKeys_RoundTripThroughToStringAndTryParse(uint virtualKey)
+    {
+        var original = new HotkeyDefinition(HotkeyModifiers.Control | HotkeyModifiers.Shift, virtualKey);
+        Assert.True(HotkeyDefinition.TryParse(original.ToString(), out var parsed));
+        Assert.Equal(original, parsed);
+    }
+
+    [Theory]
+    [InlineData("Ctrl+0x00")]
+    [InlineData("Ctrl+0x10")] // VK_SHIFT
+    [InlineData("Ctrl+0x5B")] // VK_LWIN
+    [InlineData("Ctrl+0xFF")]
+    [InlineData("Ctrl+0xZZ")]
+    public void TryParse_RejectsInvalidOrModifierHexKeys(string input)
+    {
+        Assert.False(HotkeyDefinition.TryParse(input, out _));
     }
 }

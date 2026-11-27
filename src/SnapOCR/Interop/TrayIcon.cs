@@ -24,8 +24,10 @@ public sealed class TrayIcon : IDisposable
 
     private readonly IntPtr _hwnd;
     private readonly uint _iconId = 1;
+    private readonly uint _taskbarCreatedMessage = NativeMethods.RegisterWindowMessage("TaskbarCreated");
     private IntPtr _hIcon;
     private bool _ownsIcon;
+    private bool _shown;
     private bool _added;
     private bool _subclassed;
     private bool _disposed;
@@ -64,6 +66,7 @@ public sealed class TrayIcon : IDisposable
 
         _tooltip = string.IsNullOrWhiteSpace(tooltip) ? "SnapOCR" : tooltip;
         _hIcon = LoadTrayIcon();
+        _shown = true;
 
         var data = CreateData(NativeMethods.NIF_MESSAGE | NativeMethods.NIF_ICON | NativeMethods.NIF_TIP);
         _added = NativeMethods.Shell_NotifyIcon(NativeMethods.NIM_ADD, ref data);
@@ -129,9 +132,13 @@ public sealed class TrayIcon : IDisposable
             var path = Path.Combine(AppContext.BaseDirectory, "Assets", "AppIcon.ico");
             if (File.Exists(path))
             {
+                var width = NativeMethods.GetSystemMetrics(NativeMethods.SM_CXSMICON);
+                var height = NativeMethods.GetSystemMetrics(NativeMethods.SM_CYSMICON);
                 var handle = NativeMethods.LoadImage(
-                    IntPtr.Zero, path, NativeMethods.IMAGE_ICON, 0, 0,
-                    NativeMethods.LR_LOADFROMFILE | NativeMethods.LR_DEFAULTSIZE);
+                    IntPtr.Zero, path, NativeMethods.IMAGE_ICON,
+                    width > 0 ? width : 16,
+                    height > 0 ? height : 16,
+                    NativeMethods.LR_LOADFROMFILE);
                 if (handle != IntPtr.Zero)
                 {
                     _ownsIcon = true;
@@ -178,6 +185,14 @@ public sealed class TrayIcon : IDisposable
 
     private IntPtr OnMessage(IntPtr hWnd, uint uMsg, IntPtr wParam, IntPtr lParam)
     {
+        if (_taskbarCreatedMessage != 0 && uMsg == _taskbarCreatedMessage && _shown && !_disposed)
+        {
+            // explorer.exe 重启后任务栏会广播 TaskbarCreated，重新把图标挂回通知区域。
+            var data = CreateData(NativeMethods.NIF_MESSAGE | NativeMethods.NIF_ICON | NativeMethods.NIF_TIP);
+            _added = NativeMethods.Shell_NotifyIcon(NativeMethods.NIM_ADD, ref data);
+            return IntPtr.Zero;
+        }
+
         if (uMsg == NativeMethods.WM_TRAYICON)
         {
             var mouseMessage = lParam.ToInt32() & 0xFFFF;

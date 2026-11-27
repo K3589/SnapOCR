@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace SnapOCR.Settings;
 
 /// <summary>修饰键，位值与 Win32 的 MOD_* 完全一致，可直接 cast 给 RegisterHotKey。</summary>
@@ -126,9 +128,24 @@ public readonly record struct HotkeyDefinition(HotkeyModifiers Modifiers, uint V
         }
 
         var upper = key.ToUpperInvariant();
+        if (upper.StartsWith("0X", StringComparison.Ordinal)
+            && uint.TryParse(upper[2..], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var hexKey)
+            && hexKey is >= 0x01 and <= 0xFE
+            && !IsModifierVirtualKey(hexKey))
+        {
+            virtualKey = hexKey;
+            return true;
+        }
+
         if (upper.Length is >= 2 and <= 3 && upper[0] == 'F' && int.TryParse(upper[1..], out var fn) && fn is >= 1 and <= 24)
         {
             virtualKey = (uint)(0x70 + fn - 1);
+            return true;
+        }
+
+        if (upper.Length == 7 && upper.StartsWith("NUMPAD", StringComparison.Ordinal) && upper[6] is >= '0' and <= '9')
+        {
+            virtualKey = (uint)(0x60 + (upper[6] - '0'));
             return true;
         }
 
@@ -150,11 +167,27 @@ public readonly record struct HotkeyDefinition(HotkeyModifiers Modifiers, uint V
             "RIGHT" => VirtualKeys.Right,
             "UP" => VirtualKeys.Up,
             "DOWN" => VirtualKeys.Down,
+            "SEMICOLON" or "OEM1" => 0xBA,
+            "EQUALS" or "OEMPLUS" => 0xBB,
+            "COMMA" or "OEMCOMMA" => 0xBC,
+            "MINUS" or "OEMMINUS" => 0xBD,
+            "PERIOD" or "OEMPERIOD" => 0xBE,
+            "SLASH" or "OEM2" => 0xBF,
+            "GRAVE" or "OEM3" => 0xC0,
+            "LBRACKET" or "OEM4" => 0xDB,
+            "BACKSLASH" or "OEM5" => 0xDC,
+            "RBRACKET" or "OEM6" => 0xDD,
+            "QUOTE" or "OEM7" => 0xDE,
             _ => 0,
         };
 
         return virtualKey != 0;
     }
+
+    private static bool IsModifierVirtualKey(uint virtualKey) => virtualKey is
+        0x10 or 0x11 or 0x12
+        or 0x5B or 0x5C
+        or 0xA0 or 0xA1 or 0xA2 or 0xA3 or 0xA4 or 0xA5;
 
     /// <summary>虚拟键码 → 显示名。</summary>
     public static string GetKeyName(uint virtualKey)
@@ -172,6 +205,11 @@ public readonly record struct HotkeyDefinition(HotkeyModifiers Modifiers, uint V
         if (virtualKey is >= 0x70 and <= 0x87)
         {
             return "F" + (virtualKey - 0x70 + 1);
+        }
+
+        if (virtualKey is >= 0x60 and <= 0x69)
+        {
+            return "Numpad" + (virtualKey - 0x60);
         }
 
         return virtualKey switch
@@ -192,6 +230,17 @@ public readonly record struct HotkeyDefinition(HotkeyModifiers Modifiers, uint V
             VirtualKeys.Right => "Right",
             VirtualKeys.Up => "Up",
             VirtualKeys.Down => "Down",
+            0xBA => "Semicolon",
+            0xBB => "Equals",
+            0xBC => "Comma",
+            0xBD => "Minus",
+            0xBE => "Period",
+            0xBF => "Slash",
+            0xC0 => "Grave",
+            0xDB => "LBracket",
+            0xDC => "Backslash",
+            0xDD => "RBracket",
+            0xDE => "Quote",
             _ => "0x" + virtualKey.ToString("X2"),
         };
     }
