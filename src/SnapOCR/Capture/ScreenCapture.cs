@@ -75,12 +75,44 @@ public sealed class ScreenCapture : IDisposable
     /// <summary>
     /// 启动时先抓一次，把 GDI 资源、DIB 缓存的首次成本挪走。
     /// 这样第一次按热键也不会因为创建 DIB 而多花几十毫秒。
+    /// 只预热尚未创建缓存的显示器，避免与已触发的热键抓屏竞争覆写复用缓冲。
     /// </summary>
     public void Warmup()
     {
         try
         {
-            _ = CaptureAll();
+            lock (_sync)
+            {
+                if (_disposed)
+                {
+                    return;
+                }
+
+                var monitors = MonitorEnumerator.GetMonitors();
+                var screenDc = NativeMethods.GetDC(IntPtr.Zero);
+                if (screenDc == IntPtr.Zero)
+                {
+                    return;
+                }
+
+                try
+                {
+                    foreach (var monitor in monitors)
+                    {
+                        var key = BuildSurfaceKey(monitor);
+                        if (_surfaces.ContainsKey(key))
+                        {
+                            continue;
+                        }
+
+                        _ = CaptureOne(screenDc, monitor);
+                    }
+                }
+                finally
+                {
+                    NativeMethods.ReleaseDC(IntPtr.Zero, screenDc);
+                }
+            }
         }
         catch (Exception)
         {
@@ -91,12 +123,13 @@ public sealed class ScreenCapture : IDisposable
     /// <summary>抓取所有显示器的整屏像素。热键按下瞬间调用一次。</summary>
     public IReadOnlyList<CapturedFrame> CaptureAll()
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
-
         lock (_sync)
         {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+
             var monitors = MonitorEnumerator.GetMonitors();
             var frames = new List<CapturedFrame>(monitors.Count);
+            var activeKeys = new HashSet<string>(monitors.Count, StringComparer.Ordinal);
 
             var screenDc = NativeMethods.GetDC(IntPtr.Zero);
             if (screenDc == IntPtr.Zero)
@@ -108,6 +141,11 @@ public sealed class ScreenCapture : IDisposable
             {
                 foreach (var monitor in monitors)
                 {
+                    if (monitor.Width > 0 && monitor.Height > 0)
+                    {
+                        activeKeys.Add(BuildSurfaceKey(monitor));
+                    }
+
                     var frame = CaptureOne(screenDc, monitor);
                     if (frame is not null)
                     {
@@ -120,6 +158,7 @@ public sealed class ScreenCapture : IDisposable
                 NativeMethods.ReleaseDC(IntPtr.Zero, screenDc);
             }
 
+            PruneStaleSurfaces(activeKeys);
             return frames;
         }
     }
@@ -161,9 +200,43 @@ public sealed class ScreenCapture : IDisposable
         return new CapturedFrame(monitor, surface.Buffer);
     }
 
+    private static string BuildSurfaceKey(MonitorBounds monitor)
+        => $"{monitor.DeviceName}|{monitor.Width}x{monitor.Height}";
+
+    private void PruneStaleSurfaces(HashSet<string> activeKeys)
+    {
+        if (_surfaces.Count <= activeKeys.Count)
+        {
+            return;
+        }
+
+        List<string>? staleKeys = null;
+        foreach (var key in _surfaces.Keys)
+        {
+            if (!activeKeys.Contains(key))
+            {
+                staleKeys ??= new List<string>();
+                staleKeys.Add(key);
+            }
+        }
+
+        if (staleKeys is null)
+        {
+            return;
+        }
+
+        foreach (var key in staleKeys)
+        {
+            if (_surfaces.Remove(key, out var surface))
+            {
+                surface.Dispose();
+            }
+        }
+    }
+
     private Surface? GetOrCreateSurface(IntPtr screenDc, MonitorBounds monitor)
     {
-        var key = $"{monitor.DeviceName}|{monitor.Width}x{monitor.Height}";
+        var key = BuildSurfaceKey(monitor);
         if (_surfaces.TryGetValue(key, out var existing))
         {
             return existing;
@@ -206,18 +279,21 @@ public sealed class ScreenCapture : IDisposable
 
     public void Dispose()
     {
-        if (_disposed)
+        lock (_sync)
         {
-            return;
-        }
+            if (_disposed)
+            {
+                return;
+            }
 
-        _disposed = true;
-        foreach (var surface in _surfaces.Values)
-        {
-            surface.Dispose();
-        }
+            _disposed = true;
+            foreach (var surface in _surfaces.Values)
+            {
+                surface.Dispose();
+            }
 
-        _surfaces.Clear();
+            _surfaces.Clear();
+        }
     }
 
     private sealed class Surface(IntPtr memoryDc, IntPtr bitmap, IntPtr bits, IntPtr previousObject) : IDisposable

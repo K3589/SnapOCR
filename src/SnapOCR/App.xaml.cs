@@ -19,7 +19,7 @@ public partial class App : Application
     private OverlayManager? _overlay;
     private ResultToast? _toast;
     private ScreenCapture? _capture;
-    private WindowsOcrService? _ocr;
+    private IOcrService? _ocr;
     private SettingsWindow? _settingsWindow;
     private SettingsStore? _store;
     private AppSettings _settings = new();
@@ -378,26 +378,33 @@ public partial class App : Application
 
     private async void OnSettingsSaved(object? sender, SettingsSavedEventArgs e)
     {
-        _settings = e.Settings;
-
-        if (!_store!.Save(_settings, out var error))
+        try
         {
-            Notify("设置保存失败：" + error, isError: true);
+            _settings = e.Settings;
+
+            if (!_store!.Save(_settings, out var error))
+            {
+                Notify("设置保存失败：" + error, isError: true);
+            }
+
+            ApplyHotkey(_settings.ResolveHotkey(), announce: true);
+            ApplyClipboardWatcher();
+            await ApplyStartupAsync(_settings.RunAtStartup);
+
+            var tag = ResolveLanguageTag();
+            var ready = await _ocr!.WarmupAsync(tag);
+            if (!ready)
+            {
+                Notify($"OCR 引擎不可用：{_ocr.AvailabilityMessage}", isError: true);
+            }
+
+            UpdateTooltip();
+            SyncTrayStartupFlag();
         }
-
-        ApplyHotkey(_settings.ResolveHotkey(), announce: true);
-        ApplyClipboardWatcher();
-        await ApplyStartupAsync(_settings.RunAtStartup);
-
-        var tag = ResolveLanguageTag();
-        var ready = await _ocr!.WarmupAsync(tag);
-        if (!ready)
+        catch (Exception ex)
         {
-            Notify($"OCR 引擎不可用：{_ocr.AvailabilityMessage}", isError: true);
+            Notify("应用设置失败：" + ex.Message, isError: true);
         }
-
-        UpdateTooltip();
-        SyncTrayStartupFlag();
     }
 
     private void ApplyHotkey(HotkeyDefinition definition, bool announce)
@@ -596,7 +603,17 @@ public partial class App : Application
         _hotkey?.Dispose();
         _tray?.Dispose();
         _clipboardWatcher?.Dispose();
+        _overlay?.Dispose();
         _capture?.Dispose();
+        (_ocr as IDisposable)?.Dispose();
+
+        try
+        {
+            _settingsWindow?.Close();
+        }
+        catch (Exception)
+        {
+        }
 
         try
         {

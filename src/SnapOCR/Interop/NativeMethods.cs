@@ -306,11 +306,27 @@ internal static class NativeMethods
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
 
-    [DllImport("user32.dll", SetLastError = true)]
-    public static extern IntPtr SetWindowLongPtr(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
+    public static IntPtr SetWindowLongPtr(IntPtr hWnd, int nIndex, IntPtr dwNewLong)
+        => IntPtr.Size == 8
+            ? SetWindowLongPtr64(hWnd, nIndex, dwNewLong)
+            : new IntPtr(SetWindowLong32(hWnd, nIndex, dwNewLong.ToInt32()));
 
-    [DllImport("user32.dll", SetLastError = true)]
-    public static extern IntPtr GetWindowLongPtr(IntPtr hWnd, int nIndex);
+    public static IntPtr GetWindowLongPtr(IntPtr hWnd, int nIndex)
+        => IntPtr.Size == 8
+            ? GetWindowLongPtr64(hWnd, nIndex)
+            : new IntPtr(GetWindowLong32(hWnd, nIndex));
+
+    [DllImport("user32.dll", EntryPoint = "SetWindowLongPtrW", SetLastError = true)]
+    private static extern IntPtr SetWindowLongPtr64(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
+
+    [DllImport("user32.dll", EntryPoint = "SetWindowLongW", SetLastError = true)]
+    private static extern int SetWindowLong32(IntPtr hWnd, int nIndex, int dwNewLong);
+
+    [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW", SetLastError = true)]
+    private static extern IntPtr GetWindowLongPtr64(IntPtr hWnd, int nIndex);
+
+    [DllImport("user32.dll", EntryPoint = "GetWindowLongW", SetLastError = true)]
+    private static extern int GetWindowLong32(IntPtr hWnd, int nIndex);
 
     [DllImport("user32.dll")]
     public static extern IntPtr SendMessage(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
